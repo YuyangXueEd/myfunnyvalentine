@@ -582,27 +582,23 @@
       }
       createFloatingHearts();
 
-      // --- Random position helper ---
-      function getRandomPosition(elWidth, elHeight) {
-        const margin = 20;
-        const maxX = window.innerWidth - elWidth - margin;
-        const maxY = window.innerHeight - elHeight - margin;
-        return {
-          x: Math.max(margin, Math.random() * maxX),
-          y: Math.max(margin, Math.random() * maxY),
-        };
-      }
-
-      // --- Move No button to random spot ---
+      // --- Move No button to random spot near the card ---
       function moveNoButton() {
-        const rect = btnNo.getBoundingClientRect();
+        const btnRect = btnNo.getBoundingClientRect();
         if (!noIsRunaway) {
           noIsRunaway = true;
           btnNo.classList.add('runaway');
         }
-        const pos = getRandomPosition(rect.width, rect.height);
-        btnNo.style.left = pos.x + 'px';
-        btnNo.style.top = pos.y + 'px';
+        const cardRect = document.getElementById('mainCard').getBoundingClientRect();
+        const pad = 80;
+        const minX = Math.max(10, cardRect.left - pad);
+        const maxX = Math.min(window.innerWidth - btnRect.width - 10, cardRect.right + pad - btnRect.width);
+        const minY = Math.max(10, cardRect.top - pad);
+        const maxY = Math.min(window.innerHeight - btnRect.height - 10, cardRect.bottom + pad);
+        const x = minX + Math.random() * (maxX - minX);
+        const y = minY + Math.random() * (maxY - minY);
+        btnNo.style.left = x + 'px';
+        btnNo.style.top = y + 'px';
       }
 
       // --- Grow Yes button ---
