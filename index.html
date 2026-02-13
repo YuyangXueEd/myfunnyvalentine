@@ -507,8 +507,8 @@
   </div>
 
   <div class="game-overlay" id="gameOverlay" role="region" aria-label="Snake game">
-    <p class="game-title">Collect 10 Yes hearts to win!</p>
-    <p class="game-score">Score: <span id="gameScore">0</span> / 10</p>
+    <p class="game-title">Collect 5 Yes hearts to win!</p>
+    <p class="game-score">Score: <span id="gameScore">0</span> / 5</p>
     <div class="game-canvas-wrap" style="position: relative;">
       <canvas id="snakeCanvas" width="400" height="400"></canvas>
       <div class="game-over-panel" id="gameOverPanel">
@@ -712,8 +712,8 @@
       imgYes.src = 'assets/040.png';
       imgNo.src = 'assets/038.png';
 
-      var GRID = 20;
-      var WIN_SCORE = 10;
+      var GRID = 12;
+      var WIN_SCORE = 5;
       var cellSize;
       var snake, direction, nextDirection, apple, poisons, score, gameRunning, animFrameId, lastTick;
       var TICK_MS = 150;
@@ -767,7 +767,7 @@
         score = 0;
         scoreEl.textContent = '0';
         apple = randomCell(snake);
-        spawnPoisons(4);
+        spawnPoisons(3);
         gameOverPanel.classList.remove('visible');
         gameRunning = true;
         lastTick = 0;
@@ -861,7 +861,7 @@
           }
 
           apple = randomCell(snake.concat(poisons));
-          spawnPoisons(Math.min(4 + Math.floor(score / 3), 8));
+          spawnPoisons(Math.min(3 + Math.floor(score / 2), 6));
         } else {
           snake.pop();
         }
