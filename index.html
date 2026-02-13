@@ -1269,16 +1269,15 @@
           // Normalize to 0-1 range
           var nx = (x / width) + 0.5;
           var ny = (y / height) + 0.5;
-          // Cup curve: parabolic in both axes
-          var cupX = curlAmount * (nx - 0.5) * (nx - 0.5);
-          var cupY = curlAmount * 0.5 * ny * ny;
-          // Inward curl at top edge
-          var topCurl = ny > 0.7 ? (ny - 0.7) * curlAmount * 1.5 : 0;
-          // Edge curl (sides roll inward)
-          var edgeCurl = Math.abs(nx - 0.5) * curlAmount * 0.3 * ny;
-          pos.setZ(i, cupX + cupY + topCurl + edgeCurl);
-          // Taper width toward base
-          var taper = 0.3 + ny * 0.7;
+          // Gentle cup: shallow parabola across width
+          var cupX = curlAmount * 0.4 * (nx - 0.5) * (nx - 0.5);
+          // Gradual lift from base to tip
+          var cupY = curlAmount * 0.2 * ny * ny;
+          // Soft curl at top edge (petals fold back gently)
+          var topCurl = ny > 0.75 ? (ny - 0.75) * curlAmount * 0.6 : 0;
+          pos.setZ(i, cupX + cupY + topCurl);
+          // Rounded taper: wide in middle, narrow at base, rounded at top
+          var taper = Math.sin(ny * Math.PI) * 0.7 + 0.3;
           pos.setX(i, x * taper);
         }
         geo.computeVertexNormals();
@@ -1289,38 +1288,44 @@
       function createRose(color, size) {
         var roseGroup = new THREE.Group();
         var goldenAngle = 137.508 * (Math.PI / 180);
-        var petalCount = 22;
+        var petalCount = 24;
 
         for (var p = 0; p < petalCount; p++) {
           var t = p / petalCount;
-          // Inner petals are small and curled, outer are large and open
-          var isInner = t < 0.3;
-          var isMid = t >= 0.3 && t < 0.65;
+          // 3 layers: inner tight, middle opening, outer wide
+          var isInner = t < 0.25;
+          var isMid = t >= 0.25 && t < 0.6;
 
           var w, h, curl;
           if (isInner) {
-            w = 0.12 + t * 0.3;
-            h = 0.2 + t * 0.4;
-            curl = 1.2 + t * 2;
+            // Inner: narrow, tall, tightly cupped
+            w = 0.18 + t * 0.4;
+            h = 0.25 + t * 0.3;
+            curl = 0.6 + t * 0.8;
           } else if (isMid) {
-            w = 0.18 + t * 0.3;
-            h = 0.35 + t * 0.35;
-            curl = 0.5 + (1 - t) * 1.5;
+            // Middle: wider, moderately cupped
+            w = 0.3 + t * 0.3;
+            h = 0.35 + t * 0.25;
+            curl = 0.35 + (1 - t) * 0.4;
           } else {
-            w = 0.25 + t * 0.25;
-            h = 0.45 + t * 0.2;
-            curl = 0.2 + (1 - t) * 0.8;
+            // Outer: widest, barely cupped, gently open
+            w = 0.4 + t * 0.2;
+            h = 0.4 + t * 0.15;
+            curl = 0.15 + (1 - t) * 0.25;
           }
 
-          var petalGeo = createPetalGeometry(w * size, h * size, curl, 8);
+          var petalGeo = createPetalGeometry(w * size, h * size, curl, 10);
           var shade = new THREE.Color(color).clone();
           // Inner petals darker, outer lighter
-          shade.lerp(new THREE.Color(0xfce4ec), t * 0.35);
-          if (isInner) shade.lerp(new THREE.Color(color), 0.5);
+          if (isInner) {
+            shade.lerp(new THREE.Color(0x880e4f), 0.2);
+          } else {
+            shade.lerp(new THREE.Color(0xfce4ec), t * 0.25);
+          }
 
           var petalMat = new THREE.MeshStandardMaterial({
             color: shade,
-            roughness: 0.5,
+            roughness: 0.55,
             metalness: 0.02,
             side: THREE.DoubleSide
           });
@@ -1329,17 +1334,24 @@
 
           // Golden angle spiral arrangement
           var angle = p * goldenAngle;
-          var radius = t * 0.25 * size;
-          var yOffset = t * 0.15 * size;
-          // Tilt: inner petals upright, outer petals lean out
-          var tilt = isInner ? 0.15 + t * 0.5 : 0.5 + t * 0.7;
+          var radius = t * 0.2 * size;
+          var yOffset = t * 0.1 * size;
+          // Tilt: inner petals nearly upright, outer petals lean out gently
+          var tilt;
+          if (isInner) {
+            tilt = 0.1 + t * 0.3;
+          } else if (isMid) {
+            tilt = 0.25 + t * 0.35;
+          } else {
+            tilt = 0.4 + t * 0.3;
+          }
 
           petal.position.set(
             Math.cos(angle) * radius,
             yOffset,
             Math.sin(angle) * radius
           );
-          petal.rotation.set(tilt, angle + Math.PI, (Math.random() - 0.5) * 0.1);
+          petal.rotation.set(tilt, angle + Math.PI, (Math.random() - 0.5) * 0.05);
 
           roseGroup.add(petal);
         }
