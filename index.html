@@ -343,6 +343,38 @@
       opacity: 0.8;
     }
 
+    .game-countdown {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 245, 248, 0.85);
+      backdrop-filter: blur(4px);
+      border-radius: 16px;
+      z-index: 5;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+
+    .game-countdown.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .game-countdown span {
+      font-family: 'Dancing Script', cursive;
+      font-size: 4rem;
+      color: #c2185b;
+      animation: countPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes countPop {
+      from { opacity: 0; transform: scale(2); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
     .game-over-panel {
       position: absolute;
       inset: 0;
@@ -511,6 +543,7 @@
     <p class="game-score">Score: <span id="gameScore">0</span> / 5</p>
     <div class="game-canvas-wrap" style="position: relative;">
       <canvas id="snakeCanvas" width="400" height="400"></canvas>
+      <div class="game-countdown" id="gameCountdown" aria-live="assertive"><span id="countdownText"></span></div>
       <div class="game-over-panel" id="gameOverPanel">
         <h2>Game Over!</h2>
         <p>Your score: <span id="finalScore">0</span></p>
@@ -699,6 +732,8 @@
       var gameOverPanel = document.getElementById('gameOverPanel');
       var btnPlayAgain = document.getElementById('btnPlayAgain');
       var gameHint = document.getElementById('gameHint');
+      var gameCountdown = document.getElementById('gameCountdown');
+      var countdownText = document.getElementById('countdownText');
 
       // Preload PNG assets
       var imgSnake = new Image();
@@ -882,16 +917,50 @@
         draw();
       }
 
+      function runCountdown(callback) {
+        var steps = ['3', '2', '1', 'Go!'];
+        var i = 0;
+        gameCountdown.classList.add('visible');
+        function step() {
+          countdownText.textContent = steps[i];
+          countdownText.style.animation = 'none';
+          void countdownText.offsetWidth;
+          countdownText.style.animation = '';
+          i++;
+          if (i >= steps.length) {
+            setTimeout(function () {
+              gameCountdown.classList.remove('visible');
+              callback();
+            }, 600);
+            return;
+          }
+          setTimeout(step, 800);
+        }
+        step();
+      }
+
       function startSnakeGame() {
         gameOverlay.classList.add('active');
         gameHint.textContent = isMobile ? 'Swipe to change direction' : 'Use arrow keys to move';
         initGame();
-        animFrameId = requestAnimationFrame(gameLoop);
+        gameRunning = false; // Pause until countdown finishes
+        draw(); // Show initial board behind countdown
+        runCountdown(function () {
+          gameRunning = true;
+          lastTick = 0;
+          animFrameId = requestAnimationFrame(gameLoop);
+        });
       }
 
       btnPlayAgain.addEventListener('click', function () {
         initGame();
-        animFrameId = requestAnimationFrame(gameLoop);
+        gameRunning = false;
+        draw();
+        runCountdown(function () {
+          gameRunning = true;
+          lastTick = 0;
+          animFrameId = requestAnimationFrame(gameLoop);
+        });
       });
 
       // --- Desktop: Arrow key controls ---
