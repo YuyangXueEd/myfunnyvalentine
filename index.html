@@ -444,6 +444,33 @@
       outline-offset: 3px;
     }
 
+    .btn-skip {
+      margin-top: 14px;
+      border: none;
+      border-radius: 50px;
+      padding: 8px 24px;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.35);
+      color: #ad1457;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s, transform 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .btn-skip:hover {
+      background: rgba(255, 255, 255, 0.55);
+      transform: scale(1.05);
+    }
+
+    .btn-skip:focus-visible {
+      outline: 3px solid #ad1457;
+      outline-offset: 3px;
+    }
+
     /* 3D Rose overlay */
     .rose-overlay {
       position: fixed;
@@ -633,6 +660,7 @@
       </div>
     </div>
     <p class="game-hint" id="gameHint"></p>
+    <button class="btn-skip" id="btnSkip" type="button">Skip</button>
   </div>
 
   <div class="rose-overlay" id="roseOverlay">
@@ -1063,6 +1091,16 @@
           lastTick = 0;
           animFrameId = requestAnimationFrame(gameLoop);
         });
+      });
+
+      // --- Skip button ---
+      document.getElementById('btnSkip').addEventListener('click', function () {
+        gameRunning = false;
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+        gameOverlay.classList.remove('active');
+        document.getElementById('roseOverlay').classList.add('active');
+        if (window.initRoseScene) window.initRoseScene();
+        if (window.launchRoseConfetti) window.launchRoseConfetti();
       });
 
       // --- Desktop: Arrow key controls ---
