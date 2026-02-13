@@ -507,8 +507,8 @@
   </div>
 
   <div class="game-overlay" id="gameOverlay" role="region" aria-label="Snake game">
-    <p class="game-title">Collect the Yes, avoid the No!</p>
-    <p class="game-score">Score: <span id="gameScore">0</span></p>
+    <p class="game-title">Collect 10 Yes hearts to win!</p>
+    <p class="game-score">Score: <span id="gameScore">0</span> / 10</p>
     <div class="game-canvas-wrap" style="position: relative;">
       <canvas id="snakeCanvas" width="400" height="400"></canvas>
       <div class="game-over-panel" id="gameOverPanel">
@@ -673,13 +673,7 @@
 
       // --- Yes button click ---
       btnYes.addEventListener('click', function () {
-        successOverlay.classList.add('active');
-        launchConfetti();
-        // After 2s celebration, transition to snake game
-        setTimeout(function () {
-          successOverlay.classList.remove('active');
-          startSnakeGame();
-        }, 2000);
+        startSnakeGame();
       });
 
       // --- Confetti ---
@@ -710,7 +704,16 @@
       var btnPlayAgain = document.getElementById('btnPlayAgain');
       var gameHint = document.getElementById('gameHint');
 
+      // Preload PNG assets
+      var imgSnake = new Image();
+      var imgYes = new Image();
+      var imgNo = new Image();
+      imgSnake.src = 'assets/001.png';
+      imgYes.src = 'assets/040.png';
+      imgNo.src = 'assets/038.png';
+
       var GRID = 20;
+      var WIN_SCORE = 10;
       var cellSize;
       var snake, direction, nextDirection, apple, poisons, score, gameRunning, animFrameId, lastTick;
       var TICK_MS = 150;
@@ -770,40 +773,11 @@
         lastTick = 0;
       }
 
-      function drawCell(x, y, color, text, textColor, fontSize) {
-        var px = x * cellSize;
-        var py = y * cellSize;
-        var pad = 1;
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.roundRect(px + pad, py + pad, cellSize - pad * 2, cellSize - pad * 2, 4);
-        ctx.fill();
-        if (text) {
-          ctx.fillStyle = textColor || '#fff';
-          ctx.font = (fontSize || Math.floor(cellSize * 0.45)) + 'px Quicksand, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(text, px + cellSize / 2, py + cellSize / 2);
-        }
-      }
-
-      function drawHeart(x, y, size) {
-        var px = x * cellSize + cellSize / 2;
-        var py = y * cellSize + cellSize / 2;
-        var s = size * 0.4;
-        ctx.fillStyle = '#e91e63';
-        ctx.beginPath();
-        ctx.moveTo(px, py + s * 0.3);
-        ctx.bezierCurveTo(px, py - s * 0.5, px - s, py - s * 0.5, px - s, py + s * 0.1);
-        ctx.bezierCurveTo(px - s, py + s * 0.6, px, py + s, px, py + s);
-        ctx.bezierCurveTo(px, py + s, px + s, py + s * 0.6, px + s, py + s * 0.1);
-        ctx.bezierCurveTo(px + s, py - s * 0.5, px, py - s * 0.5, px, py + s * 0.3);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = Math.floor(cellSize * 0.32) + 'px Quicksand, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Yes', px, py + s * 0.25);
+      function drawImg(img, x, y, scale) {
+        var s = scale || 1;
+        var size = cellSize * s;
+        var offset = (cellSize - size) / 2;
+        ctx.drawImage(img, x * cellSize + offset, y * cellSize + offset, size, size);
       }
 
       function draw() {
@@ -812,44 +786,36 @@
         // Draw grid background
         for (var gx = 0; gx < GRID; gx++) {
           for (var gy = 0; gy < GRID; gy++) {
-            if ((gx + gy) % 2 === 0) {
-              ctx.fillStyle = '#fff5f8';
-            } else {
-              ctx.fillStyle = '#fce4ec';
-            }
+            ctx.fillStyle = (gx + gy) % 2 === 0 ? '#fff5f8' : '#fce4ec';
             ctx.fillRect(gx * cellSize, gy * cellSize, cellSize, cellSize);
           }
         }
 
-        // Draw poisons
+        // Draw poisons (038.png)
         for (var i = 0; i < poisons.length; i++) {
-          drawCell(poisons[i].x, poisons[i].y, '#78909c', 'No', '#fff', Math.floor(cellSize * 0.4));
+          drawImg(imgNo, poisons[i].x, poisons[i].y, 1.1);
         }
 
-        // Draw apple
-        drawHeart(apple.x, apple.y, cellSize);
+        // Draw apple / yes (040.png)
+        drawImg(imgYes, apple.x, apple.y, 1.2);
 
-        // Draw snake
-        for (var j = 0; j < snake.length; j++) {
-          var brightness = j === 0 ? '#e91e63' : '#f06292';
-          var radius = j === 0 ? 6 : 4;
+        // Draw snake body (pink rounded segments)
+        for (var j = snake.length - 1; j >= 1; j--) {
           var px = snake[j].x * cellSize;
           var py = snake[j].y * cellSize;
-          ctx.fillStyle = brightness;
+          ctx.fillStyle = '#f8bbd0';
           ctx.beginPath();
-          ctx.roundRect(px + 1, py + 1, cellSize - 2, cellSize - 2, radius);
+          ctx.roundRect(px + 2, py + 2, cellSize - 4, cellSize - 4, cellSize * 0.3);
+          ctx.fill();
+          // Cheek blush on body segments
+          ctx.fillStyle = 'rgba(233, 30, 99, 0.15)';
+          ctx.beginPath();
+          ctx.arc(px + cellSize / 2, py + cellSize / 2, cellSize * 0.2, 0, Math.PI * 2);
           ctx.fill();
         }
-        // Draw eyes on head
-        var head = snake[0];
-        var hpx = head.x * cellSize + cellSize / 2;
-        var hpy = head.y * cellSize + cellSize / 2;
-        var eyeOff = cellSize * 0.18;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(hpx - eyeOff + direction.x * 2, hpy - eyeOff + direction.y * 2, cellSize * 0.1, 0, Math.PI * 2);
-        ctx.arc(hpx + eyeOff + direction.x * 2, hpy - eyeOff + direction.y * 2, cellSize * 0.1, 0, Math.PI * 2);
-        ctx.fill();
+
+        // Draw snake head (001.png)
+        drawImg(imgSnake, snake[0].x, snake[0].y, 1.3);
       }
 
       function tick() {
@@ -881,8 +847,20 @@
         if (head.x === apple.x && head.y === apple.y) {
           score++;
           scoreEl.textContent = score;
+
+          // WIN CONDITION
+          if (score >= WIN_SCORE) {
+            gameRunning = false;
+            // Transition to Yay celebration
+            setTimeout(function () {
+              gameOverlay.classList.remove('active');
+              successOverlay.classList.add('active');
+              launchConfetti();
+            }, 400);
+            return;
+          }
+
           apple = randomCell(snake.concat(poisons));
-          // Respawn poisons with increasing count
           spawnPoisons(Math.min(4 + Math.floor(score / 3), 8));
         } else {
           snake.pop();
@@ -959,14 +937,12 @@
         if (Math.max(absDx, absDy) < 20) return;
 
         if (absDx > absDy) {
-          // Horizontal swipe
           if (dx > 0 && direction.x !== -1) {
             nextDirection = { x: 1, y: 0 };
           } else if (dx < 0 && direction.x !== 1) {
             nextDirection = { x: -1, y: 0 };
           }
         } else {
-          // Vertical swipe
           if (dy > 0 && direction.y !== -1) {
             nextDirection = { x: 0, y: 1 };
           } else if (dy < 0 && direction.y !== 1) {
