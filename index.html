@@ -1221,45 +1221,118 @@
       ribbon2.position.set(0.3, 1.5, 1.6);
       bouquetGroup.add(ribbon2);
 
+      // --- Create a curved petal geometry ---
+      function createPetalGeometry(width, height, curlAmount, segments) {
+        var geo = new THREE.PlaneGeometry(width, height, segments, segments);
+        var pos = geo.attributes.position;
+        for (var i = 0; i < pos.count; i++) {
+          var x = pos.getX(i);
+          var y = pos.getY(i);
+          // Normalize to 0-1 range
+          var nx = (x / width) + 0.5;
+          var ny = (y / height) + 0.5;
+          // Cup curve: parabolic in both axes
+          var cupX = curlAmount * (nx - 0.5) * (nx - 0.5);
+          var cupY = curlAmount * 0.5 * ny * ny;
+          // Inward curl at top edge
+          var topCurl = ny > 0.7 ? (ny - 0.7) * curlAmount * 1.5 : 0;
+          // Edge curl (sides roll inward)
+          var edgeCurl = Math.abs(nx - 0.5) * curlAmount * 0.3 * ny;
+          pos.setZ(i, cupX + cupY + topCurl + edgeCurl);
+          // Taper width toward base
+          var taper = 0.3 + ny * 0.7;
+          pos.setX(i, x * taper);
+        }
+        geo.computeVertexNormals();
+        return geo;
+      }
+
       // --- Create a rose function ---
       function createRose(color, size) {
         var roseGroup = new THREE.Group();
-        var petalCount = 14;
+        var goldenAngle = 137.508 * (Math.PI / 180);
+        var petalCount = 22;
 
         for (var p = 0; p < petalCount; p++) {
-          var layer = p / petalCount;
-          var petalShape = new THREE.Shape();
-          var w = 0.3 + layer * 0.25;
-          var h = 0.5 + layer * 0.3;
-          petalShape.moveTo(0, 0);
-          petalShape.bezierCurveTo(w, h * 0.3, w, h * 0.7, 0, h);
-          petalShape.bezierCurveTo(-w, h * 0.7, -w, h * 0.3, 0, 0);
+          var t = p / petalCount;
+          // Inner petals are small and curled, outer are large and open
+          var isInner = t < 0.3;
+          var isMid = t >= 0.3 && t < 0.65;
 
-          var petalGeo = new THREE.ShapeGeometry(petalShape, 8);
-          var shade = new THREE.Color(color).lerp(new THREE.Color(0xfce4ec), layer * 0.3);
+          var w, h, curl;
+          if (isInner) {
+            w = 0.12 + t * 0.3;
+            h = 0.2 + t * 0.4;
+            curl = 1.2 + t * 2;
+          } else if (isMid) {
+            w = 0.18 + t * 0.3;
+            h = 0.35 + t * 0.35;
+            curl = 0.5 + (1 - t) * 1.5;
+          } else {
+            w = 0.25 + t * 0.25;
+            h = 0.45 + t * 0.2;
+            curl = 0.2 + (1 - t) * 0.8;
+          }
+
+          var petalGeo = createPetalGeometry(w * size, h * size, curl, 8);
+          var shade = new THREE.Color(color).clone();
+          // Inner petals darker, outer lighter
+          shade.lerp(new THREE.Color(0xfce4ec), t * 0.35);
+          if (isInner) shade.lerp(new THREE.Color(color), 0.5);
+
           var petalMat = new THREE.MeshStandardMaterial({
             color: shade,
-            roughness: 0.45,
-            metalness: 0.05,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.95
+            roughness: 0.5,
+            metalness: 0.02,
+            side: THREE.DoubleSide
           });
 
           var petal = new THREE.Mesh(petalGeo, petalMat);
-          var angle = (p / petalCount) * Math.PI * 4;
-          var tilt = 0.3 + layer * 0.9;
-          petal.rotation.set(tilt, angle, 0);
-          petal.scale.setScalar(size * (0.6 + layer * 0.4));
+
+          // Golden angle spiral arrangement
+          var angle = p * goldenAngle;
+          var radius = t * 0.25 * size;
+          var yOffset = t * 0.15 * size;
+          // Tilt: inner petals upright, outer petals lean out
+          var tilt = isInner ? 0.15 + t * 0.5 : 0.5 + t * 0.7;
+
+          petal.position.set(
+            Math.cos(angle) * radius,
+            yOffset,
+            Math.sin(angle) * radius
+          );
+          petal.rotation.set(tilt, angle + Math.PI, (Math.random() - 0.5) * 0.1);
+
           roseGroup.add(petal);
         }
 
-        // Center bud
-        var budGeo = new THREE.SphereGeometry(0.12 * size, 12, 12);
-        var budMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+        // Center bud (small sphere)
+        var budGeo = new THREE.SphereGeometry(0.08 * size, 10, 10);
+        var budMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(color).lerp(new THREE.Color(0x880e4f), 0.3),
+          roughness: 0.4
+        });
         var bud = new THREE.Mesh(budGeo, budMat);
-        bud.position.y = 0.15 * size;
+        bud.position.y = 0.05 * size;
         roseGroup.add(bud);
+
+        // Sepals (small green pointed leaves at base)
+        for (var s = 0; s < 5; s++) {
+          var sepalShape = new THREE.Shape();
+          sepalShape.moveTo(0, 0);
+          sepalShape.bezierCurveTo(0.04, 0.06, 0.03, 0.15, 0, 0.2);
+          sepalShape.bezierCurveTo(-0.03, 0.15, -0.04, 0.06, 0, 0);
+          var sepalGeo = new THREE.ShapeGeometry(sepalShape, 4);
+          var sepalMat = new THREE.MeshStandardMaterial({
+            color: 0x2e7d32, roughness: 0.6, side: THREE.DoubleSide
+          });
+          var sepal = new THREE.Mesh(sepalGeo, sepalMat);
+          var sa = (s / 5) * Math.PI * 2;
+          sepal.position.set(Math.cos(sa) * 0.08, -0.05, Math.sin(sa) * 0.08);
+          sepal.rotation.set(2.2, sa, 0);
+          sepal.scale.setScalar(size);
+          roseGroup.add(sepal);
+        }
 
         return roseGroup;
       }
